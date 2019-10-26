@@ -7,6 +7,17 @@ const CANVAS_SIZE = {
     height: 800,
 }
 
+const AXIS = {
+    x: 'x',
+    y: 'y',
+    z: 'z',
+}
+
+const DIRECTION = {
+    antiClockwise: 1,
+    clockwise: -1,
+}
+
 const FACE_COLORS = {
     front: 0xff0000,
     back: 0x00ff00,
@@ -17,11 +28,10 @@ const FACE_COLORS = {
     internal: 0xa0a0a0,
 };
 
-const CUBES_INFO = [
-    {
-        pos: { x: -1, y: -1, z: -1 },
-    },
-]
+// Global variable for convinience
+const GLOBAL = {
+    cubes: null,
+}
 
 // functions
 
@@ -37,6 +47,61 @@ function generateCubeMaterial(x, y, z) {
     return cubeMaterials;
 }
 
+function initKeyboard() {
+    const keymap = {
+        'q': { axis: 'x', level: -1, },
+        'a': { axis: 'x', level: 0, },
+        'z': { axis: 'x', level: 1, },
+        'w': { axis: 'y', level: 1, },
+        's': { axis: 'y', level: 0, },
+        'x': { axis: 'y', level: -1, },
+        'e': { axis: 'z', level: 1, },
+        'd': { axis: 'z', level: 0, },
+        'c': { axis: 'z', level: -1, },
+    }
+
+    document.addEventListener('keydown', (ev) => {
+        const key = ev.key;
+        console.log(key);
+        const validKeys = 'qazwsxedcQAZWSXEDC';
+        if (validKeys.indexOf(key) >= 0) {
+            const direction = key.toLowerCase() === key ? DIRECTION.antiClockwise : DIRECTION.clockwise;
+            const opKey = key.toLowerCase();
+            rotateFace(keymap[opKey].axis, direction, keymap[opKey].level);
+        }
+    })
+}
+
+/**
+ * modify cubes' position and rotation
+ */
+
+function rotateFace(axis, direction, level) {
+    const sinVal = direction === DIRECTION.antiClockwise ? 1 : -1;
+    const cosVal = 0;
+    const u = new THREE.Vector3(0, 0, 0);
+    u[axis] = 1;
+    const rotateMat = new THREE.Matrix3();
+    // rotate matrix from wikipedia: https://en.wikipedia.org/wiki/Rotation_matrix
+    rotateMat.set(
+        cosVal + u.x ** 2 * (1 - cosVal), u.x * u.y * (1 - cosVal) - u.z * sinVal, u.x * u.z * (1 - cosVal) + u.y * sinVal,
+        u.y * u.x * (1 - cosVal) + u.z * sinVal, cosVal + u.y ** 2 * (1 - cosVal), u.y * u.z * (1 - cosVal) - u.x * sinVal,
+        u.z * u.x * (1 - cosVal) - u.y * sinVal, u.z * u.y * (1 - cosVal) + u.x * sinVal, cosVal + u.z ** 2 * (1 - cosVal),
+    );
+
+    for (const cube of GLOBAL.cubes) {
+        if (cube.position[axis] === level) {
+            cube.rotateOnWorldAxis(u, (direction === DIRECTION.antiClockwise ? 1 : -1) * Math.PI / 2);
+            const posVec = new THREE.Vector3(cube.position.x, cube.position.y, cube.position.z);
+            posVec.applyMatrix3(rotateMat);
+            cube.position.x = posVec.x;
+            cube.position.y = posVec.y;
+            cube.position.z = posVec.z;
+        }
+    }
+
+}
+
 // global objects
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, CANVAS_SIZE.width / CANVAS_SIZE.height, 0.1, 1000);
@@ -44,7 +109,7 @@ const renderer = new THREE.WebGLRenderer({
     canvas: document.querySelector('#main-canvas'),
     antialias: true,
 });
-THREE.or
+
 const controls = new OrbitControls(camera, renderer.domElement);
 
 
@@ -57,6 +122,7 @@ camera.position.z = 5;
 camera.lookAt(0, 0, 0);
 
 const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
+GLOBAL.cubes = []
 for (let x of [-1, 0, 1]) {
     for (let y of [-1, 0, 1]) {
         for (let z of [-1, 0, 1]) {
@@ -64,18 +130,22 @@ for (let x of [-1, 0, 1]) {
             cube.position.x = x;
             cube.position.y = y;
             cube.position.z = z;
+            GLOBAL.cubes.push(cube);
             scene.add(cube);
         }
     }
 }
 
+initKeyboard();
 
 // render function
 
 function render() {
-    requestAnimationFrame(render);
     controls.update();
+
     renderer.render(scene, camera);
+
+    requestAnimationFrame(render);
 };
 
 render()
