@@ -108,6 +108,7 @@ const camera = new THREE.PerspectiveCamera(75, CANVAS_SIZE.width / CANVAS_SIZE.h
 const renderer = new THREE.WebGLRenderer({
     canvas: document.querySelector('#main-canvas'),
     antialias: true,
+    alpha: true,
 });
 
 const controls = new OrbitControls(camera, renderer.domElement);
